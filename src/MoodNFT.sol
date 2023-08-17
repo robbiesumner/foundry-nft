@@ -12,6 +12,8 @@ contract MoodNFT is ERC721 {
         SAD
     }
 
+    error MoodNFT__NotOwnerOfToken();
+
     Counters.Counter private tokenIdCounter;
     string private s_happySvgImageURI;
     string private s_sadSvgImageURI;
@@ -25,11 +27,20 @@ contract MoodNFT is ERC721 {
         s_sadSvgImageURI = sadSvgImageURI;
     }
 
-    function mint() public {
+    function mint() external {
         uint256 tokenId = tokenIdCounter.current();
         tokenIdCounter.increment();
         s_tokenIdToMood[tokenId] = Mood.HAPPY;
         _safeMint(msg.sender, tokenId);
+    }
+
+    function flipMood(uint256 tokenId) external {
+        if (!_isApprovedOrOwner(msg.sender, tokenId)) {
+            revert MoodNFT__NotOwnerOfToken();
+        }
+        s_tokenIdToMood[tokenId] = s_tokenIdToMood[tokenId] == Mood.HAPPY
+            ? Mood.SAD
+            : Mood.HAPPY;
     }
 
     function _baseURI() internal pure override returns (string memory) {
@@ -38,7 +49,7 @@ contract MoodNFT is ERC721 {
 
     function tokenURI(
         uint256 tokenId
-    ) public view override returns (string memory) {
+    ) public view virtual override returns (string memory) {
         Mood mood = s_tokenIdToMood[tokenId];
         string memory moodString;
         string memory imageURI;
@@ -54,7 +65,7 @@ contract MoodNFT is ERC721 {
         bytes memory tokenMetaData = abi.encodePacked(
             '{"name": "',
             name(),
-            '", "description": "This reflects the owners current mood.", attributes": [{"trait_type": "mood", "value": "',
+            '", "description": "This reflects the owners current mood.", "attributes": [{"trait_type": "mood", "value": "',
             moodString,
             '"}], "image": "',
             imageURI,
